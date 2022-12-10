@@ -1,7 +1,6 @@
 package http;
 
 import com.google.gson.Gson;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import player.Player;
@@ -17,69 +16,71 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.*;
 
 public class HttpClientShould {
 
     private Gson gson;
+    private URI uri;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws URISyntaxException {
         gson = new Gson();
+        uri = new URI("https://farnamjava.free.beeceptor.com/players");
     }
 
     @Test
-    void call_a_web_server_and_request_information() throws IOException, InterruptedException, URISyntaxException {
+    void call_a_web_server_and_request_information() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(new URI("https://javafarnam.free.beeceptor.com/players"))
+                .uri(uri)
                 .GET()
                 .build();
 
-        HttpResponse<String> response = HttpClient.newHttpClient()
-                .send(request, HttpResponse.BodyHandlers.ofString());
-        List<Player> players = gson.fromJson(response.body(), Players.class).getPlayers();
+        List<Player> players = gson.fromJson(getResponse(request).body(), Players.class).getPlayers();
 
         assertThat(players).containsExactlyInAnyOrder(new Player("Ali Karimi", 250), new Player("Ali Daei", 200));
     }
 
+
     @Test
-    void send_a_request_to_add_a_player() throws URISyntaxException, IOException, InterruptedException {
+    void send_a_request_to_add_a_player() throws IOException, InterruptedException {
         String player = gson.toJson(new Player("Karim Bagheri", 150));
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(new URI("https://javafarnam.free.beeceptor.com/players/add"))
+                .uri(uri)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(player))
                 .build();
 
-        HttpResponse<String> response = HttpClient.newHttpClient()
-                .send(request, HttpResponse.BodyHandlers.ofString());
-        ResponseStatus responseStatus = gson.fromJson(response.body(), ResponseStatus.class);
+        ResponseStatus responseStatus = gson.fromJson(getResponse(request).body(), ResponseStatus.class);
 
         assertThat(responseStatus.getStatus()).isEqualTo("200");
     }
 
     @Test
-    void do_async_calls() throws URISyntaxException, ExecutionException, InterruptedException {
+    void do_async_calls() throws ExecutionException, InterruptedException {
         HttpRequest postRequest = HttpRequest.newBuilder()
-                .uri(new URI("https://javafarnam.free.beeceptor.com/players/add"))
+                .uri(uri)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
 
-        CompletableFuture<HttpResponse<String>> postResponse = HttpClient.newHttpClient()
-                .sendAsync(postRequest, HttpResponse.BodyHandlers.ofString());
-
         HttpRequest getRequest = HttpRequest.newBuilder()
-                .uri(new URI("https://javafarnam.free.beeceptor.com/players/add"))
+                .uri(uri)
                 .GET()
                 .build();
 
-        CompletableFuture<HttpResponse<String>> getResponse = HttpClient.newHttpClient()
-                .sendAsync(getRequest, HttpResponse.BodyHandlers.ofString());
+        System.out.println(getAsyncResponse(postRequest).get());
+        System.out.println(getAsyncResponse(getRequest).get());
+    }
 
-        System.out.println(getResponse.get());
-        System.out.println(postResponse.get());
+    private CompletableFuture<HttpResponse<String>> getAsyncResponse(HttpRequest request) {
+        return HttpClient.newHttpClient()
+                .sendAsync(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> getResponse(HttpRequest request) throws IOException, InterruptedException {
+        return HttpClient.newHttpClient()
+                .send(request, HttpResponse.BodyHandlers.ofString());
     }
 }
