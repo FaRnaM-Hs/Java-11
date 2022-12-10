@@ -15,6 +15,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -55,5 +58,28 @@ public class HttpClientShould {
         ResponseStatus responseStatus = gson.fromJson(response.body(), ResponseStatus.class);
 
         assertThat(responseStatus.getStatus()).isEqualTo("200");
+    }
+
+    @Test
+    void do_async_calls() throws URISyntaxException, ExecutionException, InterruptedException {
+        HttpRequest postRequest = HttpRequest.newBuilder()
+                .uri(new URI("https://javafarnam.free.beeceptor.com/players/add"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+        CompletableFuture<HttpResponse<String>> postResponse = HttpClient.newHttpClient()
+                .sendAsync(postRequest, HttpResponse.BodyHandlers.ofString());
+
+        HttpRequest getRequest = HttpRequest.newBuilder()
+                .uri(new URI("https://javafarnam.free.beeceptor.com/players/add"))
+                .GET()
+                .build();
+
+        CompletableFuture<HttpResponse<String>> getResponse = HttpClient.newHttpClient()
+                .sendAsync(getRequest, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println(getResponse.get());
+        System.out.println(postResponse.get());
     }
 }
