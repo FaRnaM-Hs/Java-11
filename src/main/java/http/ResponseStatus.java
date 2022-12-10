@@ -1,4 +1,4 @@
-package player;
+package http;
 
 public class ResponseStatus {
 
